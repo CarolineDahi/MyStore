@@ -1,0 +1,13 @@
+{
+  "culture": "en",
+  "texts": {
+    "Menu:Home": "Home",
+    "Welcome": "Welcome",
+    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io."
+  },
+  "Permission:MyStore": "My Store",
+  "Permission:Products": "Product Management",
+  "Permission:Products.Create": "Creating new products",
+  "Permission:Products.Edit": "Editing the products",
+  "Permission:Products.Delete": "Deleting the products"
+}
