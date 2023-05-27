@@ -6,8 +6,21 @@
     "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io."
   },
   "Permission:MyStore": "My Store",
+
   "Permission:Products": "Product Management",
   "Permission:Products.Create": "Creating new products",
   "Permission:Products.Edit": "Editing the products",
-  "Permission:Products.Delete": "Deleting the products"
+  "Permission:Products.Delete": "Deleting the products",
+
+  "Permission:Customers": "Customer Management",
+  "Permission:Customers.Create": "Creating new customers",
+  "Permission:Customers.Edit": "Editing the customers",
+  "Permission:Customers.Delete": "Deleting the customers",
+
+  "Permission:ProductViews": "Product View Management",
+  "Permission:ProductViews.Create": "Creating new product views",
+  "Permission:ProductViews.Edit": "Editing the product views",
+  "Permission:ProductViews.Delete": "Deleting the product views"
+
+
 }

@@ -1,4 +1,7 @@
-﻿using MyStore.Customers.Dtos;
+﻿using Microsoft.AspNetCore.Authorization;
+using MyStore.Customers.Dtos;
+using MyStore.Permissions;
+using MyStore.Products;
 using MyStore.Users;
 using System;
 using System.Collections.Generic;
@@ -13,6 +16,7 @@ using Volo.Abp.Identity;
 
 namespace MyStore.Customers
 {
+    [Authorize(MyStorePermissions.Customers.Default)]
     public class CustomerAppService : CrudAppService<
                                             Customer,
                                             CustomerDto,
@@ -22,14 +26,18 @@ namespace MyStore.Customers
                                       ICustomerAppService
 
     {
-        private readonly IRepository<Customer, Guid> repository;
         private readonly IdentityUserManager userAppService;
 
         public CustomerAppService(IRepository<Customer, Guid> repository, 
                                   IdentityUserManager userAppService) : base(repository)
         {
-            this.repository = repository;
             this.userAppService = userAppService;
+
+            GetPolicyName = MyStorePermissions.Customers.Default;
+            GetListPolicyName = MyStorePermissions.Customers.Default;
+            CreatePolicyName = MyStorePermissions.Customers.Create;
+            UpdatePolicyName = MyStorePermissions.Customers.Edit;
+            DeletePolicyName = MyStorePermissions.Customers.Delete;
         }
 
         public async override Task<CustomerDto> CreateAsync(CreateUpdateCustomerDto input)
@@ -49,8 +57,9 @@ namespace MyStore.Customers
                 UserId = user.Id,
                 PreferredLanguage = input.PreferredLanguage,
             };
+            //var customer = ObjectMapper.Map<>
 
-            await repository.InsertAsync(customer);
+            await Repository.InsertAsync(customer);
 
             user.SetProperty("TypeId", customer.Id);
             user.SetProperty("UserType", UserType.Customer);
@@ -58,5 +67,7 @@ namespace MyStore.Customers
 
             return ObjectMapper.Map<Customer, CustomerDto>(customer);
         }
+
+        
     }
 }

@@ -17,7 +17,8 @@ public class MyStoreApplicationAutoMapperProfile : Profile
         CreateMap<CreateUpdateCustomerDto, Customer>();
         CreateMap<Product, ProductDto>();
         CreateMap<CreateUpdateProductDto, Product>();
-        CreateMap<ProductView, ProductViewDto>();
+        CreateMap<ProductView, ProductViewDto>()
+            .ForMember(dto => dto.CustomerName, ops => ops.MapFrom(src => src.Customer.FirstName));
         CreateMap<CreateUpdateProductViewDto, ProductView>();
     }
 }

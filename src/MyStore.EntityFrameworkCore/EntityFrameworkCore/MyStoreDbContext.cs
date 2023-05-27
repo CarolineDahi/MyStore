@@ -99,7 +99,8 @@ public class MyStoreDbContext :
             b.ToTable(MyStoreConsts.DbTablePrefix + "Customers", MyStoreConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
 
-           
+            b.HasMany(c => c.ProductViews)
+             .WithOne(c => c.Customer);
         });
 
         builder.Entity<Product>(b =>
@@ -112,6 +113,9 @@ public class MyStoreDbContext :
         {
             b.ToTable(MyStoreConsts.DbTablePrefix + "ProductViews", MyStoreConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
+
+            b.HasOne(r => r.Customer)
+             .WithMany(c => c.ProductViews);
         });
 
         //builder.Entity<AppUser>(b =>

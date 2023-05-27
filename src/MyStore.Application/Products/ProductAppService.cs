@@ -1,4 +1,5 @@
-﻿using MyStore.Permissions;
+﻿using Microsoft.AspNetCore.Authorization;
+using MyStore.Permissions;
 using MyStore.Products;
 using MyStore.Products.Dtos;
 using System;
@@ -12,6 +13,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace MyStore.Products
 {
+    [Authorize(MyStorePermissions.Products.Default)]
     public class ProductAppService : CrudAppService<
                                         Product,
                                         ProductDto,
@@ -22,11 +24,11 @@ namespace MyStore.Products
     {
         public ProductAppService(IRepository<Product, Guid> repository) : base(repository)
         {
-            //GetPolicyName = MyStorePermissions.Products.Default;
-            //GetListPolicyName = MyStorePermissions.Products.Default;
-            //CreatePolicyName = MyStorePermissions.Products.Create;
-            //UpdatePolicyName = MyStorePermissions.Products.Edit;
-            //DeletePolicyName = MyStorePermissions.Products.Delete;
+            GetPolicyName = MyStorePermissions.Products.Default;
+            GetListPolicyName = MyStorePermissions.Products.Default;
+            CreatePolicyName = MyStorePermissions.Products.Create;
+            UpdatePolicyName = MyStorePermissions.Products.Edit;
+            DeletePolicyName = MyStorePermissions.Products.Delete;
         }
 
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Volo.Abp.Application.Dtos;
+using static MyStore.Permissions.MyStorePermissions;
 
 namespace MyStore.Products.Dtos
 {
