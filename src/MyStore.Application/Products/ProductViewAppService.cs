@@ -20,10 +20,10 @@ using Volo.Abp.Identity;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.Settings;
 using Volo.Abp.Threading;
+using Volo.Abp.Validation;
 
 namespace MyStore.Products
 {
-    [Authorize(MyStorePermissions.ProductViews.Default)]
     public class ProductViewAppService : CrudAppService<
                                             ProductView,
                                             ProductViewDto,
@@ -52,11 +52,11 @@ namespace MyStore.Products
             this.identityUserRepository = identityUserRepository;
 
 
-            GetPolicyName = MyStorePermissions.ProductViews.Default;
-            GetListPolicyName = MyStorePermissions.ProductViews.Default;
-            
-            UpdatePolicyName = MyStorePermissions.ProductViews.Edit;
-            DeletePolicyName = MyStorePermissions.ProductViews.Delete;
+            //GetPolicyName = MyStorePermissions.ProductViews.Default;
+            //GetListPolicyName = MyStorePermissions.ProductViews.Default;
+            //CreatePolicyName = MyStorePermissions.ProductViews.Create;
+            //UpdatePolicyName = MyStorePermissions.ProductViews.Edit;
+            //DeletePolicyName = MyStorePermissions.ProductViews.Delete;
         }
 
         public async override Task<ProductViewDto> GetAsync(Guid id)
@@ -108,9 +108,13 @@ namespace MyStore.Products
 
         public async override Task<ProductViewDto> CreateAsync(CreateUpdateProductViewDto input)
         {
-            var customer = await customerRepository.GetAsync(input.CustomerId);
+            var reviewOld = await Repository.SingleOrDefaultAsync(r => r.ProductId == input.ProductId && r.CustomerId == input.CustomerId);
+            if(reviewOld is not null)
+            {
+                throw new InvalidOperationException("You can't add another review");
+            }
 
-            var user = await identityUserRepository.GetAsync(customer.UserId);
+            var user = await identityUserRepository.GetAsync(CurrentUser.Id.Value);
             var type = user.GetProperty<byte>("UserType");
             if (type != (byte)UserType.Customer)
             {
@@ -119,11 +123,65 @@ namespace MyStore.Products
 
             var AutoApprove = await setting.IsTrueAsync("MyStoreAutoApproveReviewer");
             var review = ObjectMapper.Map<CreateUpdateProductViewDto, ProductView>(input);
-            review.IsApproved = AutoApprove;
+            review.IsApproved = AutoApprove ? AutoApprove : null;
 
             await Repository.InsertAsync(review);
 
-            return ObjectMapper.Map<ProductView, ProductViewDto>(review);
+            var product = await productRepository.GetAsync(input.ProductId);
+            product.RatingSum += input.Rate;
+            product.TotalVotes++;
+
+            await productRepository.UpdateAsync(product);
+
+            var reviewDto = ObjectMapper.Map<ProductView, ProductViewDto>(review);
+
+            var customer = await customerRepository.GetAsync(review.CustomerId);
+            reviewDto.CustomerName = customer.FirstName + " " + customer.LastName;
+
+            reviewDto.ProductName = product.Name;
+
+            return reviewDto;
+        }
+
+        public async override Task<ProductViewDto> UpdateAsync(Guid id, CreateUpdateProductViewDto input)
+        {
+            var review = await Repository.GetAsync(id);
+
+            var user = await identityUserRepository.GetAsync(CurrentUser.Id.Value);
+            var type = user.GetProperty<byte>("UserType");
+            if(type != (byte)UserType.Customer)
+            { 
+                throw new UnauthorizedAccessException(); 
+            }
+            var product = await productRepository.GetAsync(input.ProductId);
+            product.RatingSum += (-review.Rate + input.Rate);
+            await productRepository.UpdateAsync(product);
+
+            //review = ObjectMapper.Map<CreateUpdateProductViewDto, ProductView>(input);
+            review.Rate = input.Rate;
+            review.Comment = input.Comment;
+            await Repository.UpdateAsync(review);
+            
+            var reviewDto = ObjectMapper.Map<ProductView, ProductViewDto>(review);
+
+            var customer = await customerRepository.GetAsync(review.CustomerId);
+            reviewDto.CustomerName = customer.FirstName + " " + customer.LastName;
+
+            reviewDto.ProductName = product.Name;
+
+            return reviewDto;
+        }
+
+        public async override Task DeleteAsync(Guid id)
+        {
+            var review = await Repository.GetAsync(id);
+
+            var product = await productRepository.GetAsync(review.ProductId);
+            product.RatingSum -= review.Rate;
+            product.TotalVotes--;
+            await productRepository.UpdateAsync(product);
+
+            await Repository.DeleteAsync(review);
         }
 
         public async Task ApproveReviews(List<Guid> viewIds, bool IsApprove)

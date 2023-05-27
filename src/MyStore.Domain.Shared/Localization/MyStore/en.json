@@ -12,15 +12,4 @@
   "Permission:Products.Edit": "Editing the products",
   "Permission:Products.Delete": "Deleting the products",
 
-  "Permission:Customers": "Customer Management",
-  "Permission:Customers.Create": "Creating new customers",
-  "Permission:Customers.Edit": "Editing the customers",
-  "Permission:Customers.Delete": "Deleting the customers",
-
-  "Permission:ProductViews": "Product View Management",
-  "Permission:ProductViews.Create": "Creating new product views",
-  "Permission:ProductViews.Edit": "Editing the product views",
-  "Permission:ProductViews.Delete": "Deleting the product views"
-
-
 }

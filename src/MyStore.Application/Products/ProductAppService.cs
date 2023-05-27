@@ -31,5 +31,12 @@ namespace MyStore.Products
             DeletePolicyName = MyStorePermissions.Products.Delete;
         }
 
+        //public async override Task<ProductDto> GetAsync(Guid id)
+        //{
+        //    var product = await Repository.GetAsync(id);
+        //    var productDto = ObjectMapper.Map<Product, ProductDto>(product);
+
+        //    productDto.TotalVotes = 
+        //}
     }
 }

@@ -16,7 +16,7 @@ using Volo.Abp.Identity;
 
 namespace MyStore.Customers
 {
-    [Authorize(MyStorePermissions.Customers.Default)]
+    //[Authorize(MyStorePermissions.Customers.Default)]
     public class CustomerAppService : CrudAppService<
                                             Customer,
                                             CustomerDto,
@@ -33,31 +33,20 @@ namespace MyStore.Customers
         {
             this.userAppService = userAppService;
 
-            GetPolicyName = MyStorePermissions.Customers.Default;
-            GetListPolicyName = MyStorePermissions.Customers.Default;
-            CreatePolicyName = MyStorePermissions.Customers.Create;
-            UpdatePolicyName = MyStorePermissions.Customers.Edit;
-            DeletePolicyName = MyStorePermissions.Customers.Delete;
+            //GetPolicyName = MyStorePermissions.Customers.Default;
+            //GetListPolicyName = MyStorePermissions.Customers.Default;
+            //UpdatePolicyName = MyStorePermissions.Customers.Edit;
+            //DeletePolicyName = MyStorePermissions.Customers.Delete;
         }
 
+        [AllowAnonymous]
         public async override Task<CustomerDto> CreateAsync(CreateUpdateCustomerDto input)
         {
-            var user = new IdentityUser(new Guid(), input.FirstName, input.Email);
+            var user = new IdentityUser(new Guid(), input.UserName, input.Email);
             await userAppService.CreateAsync(user, input.Password);
 
-            var customer = new Customer
-            {
-                FirstName = input.FirstName,
-                LastName = input.LastName,
-                CompanyName = input.CompanyName,
-                DateOfBirth = input.DateOfBirth,
-                Email = input.Email,
-                Number = input.Number,
-                PhoneNumber = input.PhoneNumber,
-                UserId = user.Id,
-                PreferredLanguage = input.PreferredLanguage,
-            };
-            //var customer = ObjectMapper.Map<>
+            var customer = ObjectMapper.Map<CreateUpdateCustomerDto, Customer>(input);
+            customer.UserId = user.Id;
 
             await Repository.InsertAsync(customer);
 

@@ -14,20 +14,4 @@ public static class MyStorePermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
     }
-
-    public static class Customers
-    {
-        public const string Default = GroupName + ".Customers";
-        public const string Create = Default + ".Create";
-        public const string Edit = Default + ".Edit";
-        public const string Delete = Default + ".Delete";
-    }
-
-    public static class ProductViews
-    {
-        public const string Default = GroupName + ".ProductViews";
-        public const string Create = Default + ".Create";
-        public const string Edit = Default + ".Edit";
-        public const string Delete = Default + ".Delete";
-    }
 }
