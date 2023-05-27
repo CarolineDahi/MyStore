@@ -54,7 +54,7 @@ namespace MyStore.Products
 
             GetPolicyName = MyStorePermissions.ProductViews.Default;
             GetListPolicyName = MyStorePermissions.ProductViews.Default;
-            CreatePolicyName = MyStorePermissions.ProductViews.Create;
+            
             UpdatePolicyName = MyStorePermissions.ProductViews.Edit;
             DeletePolicyName = MyStorePermissions.ProductViews.Delete;
         }
