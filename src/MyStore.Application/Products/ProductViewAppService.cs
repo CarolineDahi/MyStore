@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Authorization;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
@@ -93,27 +94,27 @@ namespace MyStore.Products
         {
             if(!CurrentUser.Id.HasValue)
             {
-                throw new InvalidOperationException("Guest can not rate.");
+                throw new AbpAuthorizationException("Guest can not rate.");
             }
 
             var user = await identityUserRepository.GetAsync(CurrentUser.Id.Value);
             var customerId = user.GetProperty<Guid?>("TypeId");
             if(customerId != input.CustomerId)
             {
-                throw new InvalidOperationException("CustomerId not equal Logged user id");
+                throw new AbpAuthorizationException("CustomerId not equal Logged user id.");
             }
 
             var type = user.GetProperty<byte>("UserType");
             if (type != (byte)UserType.Customer)
             {
-                throw new UnauthorizedAccessException();
+                throw new AbpValidationException("User must be a customer.");
             }
 
             var reviewOld = await Repository.SingleOrDefaultAsync(r => r.ProductId == input.ProductId 
                                                                     && r.CustomerId == input.CustomerId);
             if(reviewOld is not null)
             {
-                throw new InvalidOperationException("You can't add another review");
+                throw new AbpValidationException("You can't add another review");
             }
 
 
@@ -144,13 +145,13 @@ namespace MyStore.Products
             var customerId = user.GetProperty<Guid?>("TypeId");
             if (customerId != input.CustomerId)
             {
-                throw new InvalidOperationException("CustomerId not equal Logged user id");
+                throw new AbpValidationException("CustomerId not equal Logged user id");
             }
 
             var type = user.GetProperty<byte>("UserType");
             if(type != (byte)UserType.Customer)
             { 
-                throw new UnauthorizedAccessException(); 
+                throw new AbpValidationException("User must be a customer.");
             }
 
             var review = await Repository.GetAsync(id);

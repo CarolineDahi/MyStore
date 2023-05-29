@@ -12,6 +12,6 @@ namespace MyStore.Products.Dtos
         public double Price { get; set; }
         public double RatingSum { get; set; }
         public double TotalVotes { get; set; }
-
+        public double AvrageRate { get; set; }
     }
 }

@@ -7,11 +7,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 
 namespace MyStore.Customers
 {
-    public class Customer :  FullAuditedAggregateRoot<Guid>
+    public class Customer :  FullAuditedAggregateRoot<Guid>, IMultiTenant
     {
+        public Guid? TenantId { get; set; }
+
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
@@ -26,5 +29,6 @@ namespace MyStore.Customers
         public IdentityUser User { get; set; }
 
         public ICollection<ProductView> ProductViews { get; set; }
+
     }
 }

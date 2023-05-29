@@ -42,7 +42,7 @@ namespace MyStore.Customers
         [AllowAnonymous]
         public async override Task<CustomerDto> CreateAsync(CreateUpdateCustomerDto input)
         {
-            var user = new IdentityUser(new Guid(), input.UserName, input.Email);
+            var user = new IdentityUser(new Guid(), input.UserName, input.Email, CurrentTenant.Id);
             await userAppService.CreateAsync(user, input.Password);
 
             var customer = ObjectMapper.Map<CreateUpdateCustomerDto, Customer>(input);

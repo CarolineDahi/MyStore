@@ -15,10 +15,14 @@ public class MyStoreApplicationAutoMapperProfile : Profile
          * into multiple profile classes for a better organization. */
         CreateMap<Customer, CustomerDto>();
         CreateMap<CreateUpdateCustomerDto, Customer>();
-        CreateMap<Product, ProductDto>();
+
+        CreateMap<Product, ProductDto>()
+            .ForMember(dto => dto.AvrageRate,
+                       ops => ops.MapFrom(src => src.RatingSum / (src.TotalVotes != 0 ? src.TotalVotes : 1)));
         CreateMap<CreateUpdateProductDto, Product>();
+
         CreateMap<ProductView, ProductViewDto>()
-            .ForMember(dto => dto.CustomerName, 
+            .ForMember(dto => dto.CustomerName,
                        ops => ops.MapFrom(src => src.Customer.FirstName + " " + src.Customer.LastName));
         CreateMap<CreateUpdateProductViewDto, ProductView>();
     }
