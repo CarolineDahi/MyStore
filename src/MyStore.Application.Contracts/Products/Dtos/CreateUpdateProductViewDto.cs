@@ -8,7 +8,6 @@ namespace MyStore.Products.Dtos
     {
         public double Rate { get; set; }
         public string Comment { get; set; }
-        public DateTime RateDate { get; set; }
         public Guid CustomerId { get; set; }
         public Guid ProductId { get; set; }
     }

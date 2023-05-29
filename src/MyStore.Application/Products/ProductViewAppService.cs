@@ -2,6 +2,7 @@
 using Microsoft.Win32;
 using MyStore.Customers;
 using MyStore.Permissions;
+using MyStore.Products.Data_Access;
 using MyStore.Products.Dtos;
 using MyStore.Settings;
 using MyStore.Users;
@@ -32,45 +33,35 @@ namespace MyStore.Products
                                             CreateUpdateProductViewDto>,
                                         IProductViewAppService
     {
+        private readonly IProductViewRepository repository;
         private readonly ISettingProvider setting;
         private readonly ISettingManager settingManager;
         private readonly IRepository<Customer, Guid> customerRepository;
         private readonly IRepository<Product, Guid> productRepository;
         private readonly IIdentityUserRepository identityUserRepository;
 
-        public ProductViewAppService(IRepository<ProductView, Guid> repository, 
+        public ProductViewAppService(IProductViewRepository repository, 
                                      ISettingProvider setting,
                                      ISettingManager settingManager,
                                      IRepository<Customer, Guid> customerRepository,
                                      IRepository<Product, Guid> productRepository,
                                      IIdentityUserRepository identityUserRepository) : base(repository)
         {
+            this.repository = repository;
             this.setting = setting;
             this.settingManager = settingManager;
             this.customerRepository = customerRepository;
             this.productRepository = productRepository;
             this.identityUserRepository = identityUserRepository;
 
-
-            //GetPolicyName = MyStorePermissions.ProductViews.Default;
-            //GetListPolicyName = MyStorePermissions.ProductViews.Default;
-            //CreatePolicyName = MyStorePermissions.ProductViews.Create;
-            //UpdatePolicyName = MyStorePermissions.ProductViews.Edit;
-            //DeletePolicyName = MyStorePermissions.ProductViews.Delete;
         }
 
         public async override Task<ProductViewDto> GetAsync(Guid id)
         {
-            var review = await Repository.GetAsync(id);
-            var reviewDto = ObjectMapper.Map<ProductView, ProductViewDto>(review);
 
-            var customer = await customerRepository.GetAsync(review.CustomerId);
-            reviewDto.CustomerName = customer.FirstName + " " + customer.LastName;
-
-            var product = await productRepository.GetAsync(review.ProductId);
-            reviewDto.ProductName = product.Name;
-
-            return reviewDto;
+            var review = (await repository.DetailsWithInclude()).SingleOrDefault(r => r.Id == id);
+            
+            return ObjectMapper.Map<ProductView, ProductViewDto>(review);
         }
 
 
@@ -82,7 +73,7 @@ namespace MyStore.Products
             var user = await identityUserRepository.GetAsync(CurrentUser.Id.Value);
             var type = user.GetProperty<byte>("UserType");
 
-            var query = await Repository.WithDetailsAsync();
+            var query = await repository.DetailsWithInclude();
        
             if (type is (byte)UserType.Customer)
                 query = query.Where(r => r.IsApproved == true);
@@ -95,102 +86,123 @@ namespace MyStore.Products
 
             var reviewsDtos = ObjectMapper.Map<List<ProductView>, List<ProductViewDto>>(reviews);
 
-            var customerDic = await GetCustomerDictionaryAsync(reviews);
-            reviewsDtos.ForEach(r => r.CustomerName =
-            customerDic[r.CustomerId].FirstName + " " + customerDic[r.CustomerId].LastName);
-
-            var productDic = await GetProductDictionaryAsync(reviews);
-            reviewsDtos.ForEach(r => r.ProductName =
-            productDic[r.ProductId].Name);
-
             return new PagedResultDto<ProductViewDto>(reviewsDtos.Count, reviewsDtos);
         }
 
         public async override Task<ProductViewDto> CreateAsync(CreateUpdateProductViewDto input)
         {
-            var reviewOld = await Repository.SingleOrDefaultAsync(r => r.ProductId == input.ProductId && r.CustomerId == input.CustomerId);
-            if(reviewOld is not null)
+            if(!CurrentUser.Id.HasValue)
             {
-                throw new InvalidOperationException("You can't add another review");
+                throw new InvalidOperationException("Guest can not rate.");
             }
 
             var user = await identityUserRepository.GetAsync(CurrentUser.Id.Value);
+            var customerId = user.GetProperty<Guid?>("TypeId");
+            if(customerId != input.CustomerId)
+            {
+                throw new InvalidOperationException("CustomerId not equal Logged user id");
+            }
+
             var type = user.GetProperty<byte>("UserType");
             if (type != (byte)UserType.Customer)
             {
                 throw new UnauthorizedAccessException();
             }
 
+            var reviewOld = await Repository.SingleOrDefaultAsync(r => r.ProductId == input.ProductId 
+                                                                    && r.CustomerId == input.CustomerId);
+            if(reviewOld is not null)
+            {
+                throw new InvalidOperationException("You can't add another review");
+            }
+
+
             var AutoApprove = await setting.IsTrueAsync("MyStoreAutoApproveReviewer");
             var review = ObjectMapper.Map<CreateUpdateProductViewDto, ProductView>(input);
             review.IsApproved = AutoApprove ? AutoApprove : null;
+            review.RateDate = DateTime.Now;
 
-            await Repository.InsertAsync(review);
+            await Repository.InsertAsync(review, true);
 
-            var product = await productRepository.GetAsync(input.ProductId);
-            product.RatingSum += input.Rate;
-            product.TotalVotes++;
+            if (AutoApprove)
+            {
+                var product = await productRepository.GetAsync(input.ProductId);
+                product.RatingSum += input.Rate;
+                product.TotalVotes++;
 
-            await productRepository.UpdateAsync(product);
+                await productRepository.UpdateAsync(product);
+            }
 
-            var reviewDto = ObjectMapper.Map<ProductView, ProductViewDto>(review);
+            review = (await repository.DetailsWithInclude()).SingleOrDefault(r => r.Id == review.Id);
 
-            var customer = await customerRepository.GetAsync(review.CustomerId);
-            reviewDto.CustomerName = customer.FirstName + " " + customer.LastName;
-
-            reviewDto.ProductName = product.Name;
-
-            return reviewDto;
+            return ObjectMapper.Map<ProductView, ProductViewDto>(review);
         }
 
         public async override Task<ProductViewDto> UpdateAsync(Guid id, CreateUpdateProductViewDto input)
         {
-            var review = await Repository.GetAsync(id);
-
             var user = await identityUserRepository.GetAsync(CurrentUser.Id.Value);
+            var customerId = user.GetProperty<Guid?>("TypeId");
+            if (customerId != input.CustomerId)
+            {
+                throw new InvalidOperationException("CustomerId not equal Logged user id");
+            }
+
             var type = user.GetProperty<byte>("UserType");
             if(type != (byte)UserType.Customer)
             { 
                 throw new UnauthorizedAccessException(); 
             }
-            var product = await productRepository.GetAsync(input.ProductId);
-            product.RatingSum += (-review.Rate + input.Rate);
-            await productRepository.UpdateAsync(product);
 
-            //review = ObjectMapper.Map<CreateUpdateProductViewDto, ProductView>(input);
+            var review = await Repository.GetAsync(id);
+
+            if (review.IsApproved is true)
+            {
+                var product = await productRepository.GetAsync(input.ProductId);
+                product.RatingSum += (-review.Rate + input.Rate);
+                await productRepository.UpdateAsync(product);
+            }
+
             review.Rate = input.Rate;
             review.Comment = input.Comment;
-            await Repository.UpdateAsync(review);
+            await Repository.UpdateAsync(review, true);
             
-            var reviewDto = ObjectMapper.Map<ProductView, ProductViewDto>(review);
+            review = (await repository.DetailsWithInclude()).SingleOrDefault(r => r.Id == review.Id);
 
-            var customer = await customerRepository.GetAsync(review.CustomerId);
-            reviewDto.CustomerName = customer.FirstName + " " + customer.LastName;
-
-            reviewDto.ProductName = product.Name;
-
-            return reviewDto;
+            return ObjectMapper.Map<ProductView, ProductViewDto>(review);
         }
 
         public async override Task DeleteAsync(Guid id)
         {
             var review = await Repository.GetAsync(id);
 
-            var product = await productRepository.GetAsync(review.ProductId);
-            product.RatingSum -= review.Rate;
-            product.TotalVotes--;
-            await productRepository.UpdateAsync(product);
-
+            if (review.IsApproved is true)
+            {
+                var product = await productRepository.GetAsync(review.ProductId);
+                product.RatingSum -= review.Rate;
+                product.TotalVotes--;
+                await productRepository.UpdateAsync(product);
+            }
             await Repository.DeleteAsync(review);
         }
 
         public async Task ApproveReviews(List<Guid> viewIds, bool IsApprove)
         {
-            var query = await Repository.GetQueryableAsync();
-            var views = query.Where(v => viewIds.Contains(v.Id)).ToList();
+            var query = await repository.DetailsWithInclude();
+            var reviews = query.Where(v => viewIds.Contains(v.Id)).ToList();
 
-            views.ForEach(v => v.IsApproved = IsApprove);
-            await Repository.UpdateManyAsync(views);
+            reviews.ForEach(v => v.IsApproved = IsApprove);
+
+            if(IsApprove)
+            {
+                foreach (var review in reviews)
+                {
+                    review.Product.RatingSum += review.Rate;
+                    review.Product.TotalVotes++;
+                    await productRepository.UpdateAsync(review.Product);
+                }
+            }
+
+            await Repository.UpdateManyAsync(reviews);
         }
 
         public async Task ChangeAutoApproved(bool IsAutoApproved)
@@ -198,28 +210,5 @@ namespace MyStore.Products
             await settingManager.SetGlobalAsync("MyStoreAutoApproveReviewer", IsAutoApproved.ToString());
         }
 
-        private async Task<Dictionary<Guid, Customer>> GetCustomerDictionaryAsync(List<ProductView> reviews)
-        {
-            var customerIds = reviews.Select(r => r.CustomerId).Distinct();
-
-            var query = await customerRepository.GetQueryableAsync();
-
-            var customers = await AsyncExecuter.ToListAsync(
-                query.Where(c => customerIds.Contains(c.Id)));
-
-            return customers.ToDictionary(c => c.Id, c => c);
-        }
-
-        private async Task<Dictionary<Guid, Product>> GetProductDictionaryAsync(List<ProductView> reviews)
-        {
-            var productIds = reviews.Select(r => r.ProductId).Distinct();
-
-            var query = await productRepository.GetQueryableAsync();
-
-            var products = await AsyncExecuter.ToListAsync(
-                query.Where(c => productIds.Contains(c.Id)));
-
-            return products.ToDictionary(c => c.Id, c => c);
-        }
     }
 }

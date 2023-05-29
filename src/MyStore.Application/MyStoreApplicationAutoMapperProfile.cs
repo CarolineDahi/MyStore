@@ -17,8 +17,11 @@ public class MyStoreApplicationAutoMapperProfile : Profile
         CreateMap<CreateUpdateCustomerDto, Customer>();
         CreateMap<Product, ProductDto>();
         CreateMap<CreateUpdateProductDto, Product>();
-        CreateMap<ProductView, ProductViewDto>();
-            //.ForMember(dto => dto.CustomerName, ops => ops.MapFrom(src => src.Customer.FirstName));
-        CreateMap<CreateUpdateProductViewDto, ProductView>();
+        CreateMap<ProductView, ProductViewDto>()
+            .ForMember(dto => dto.CustomerName, 
+                       ops => ops.MapFrom(src => src.Customer.FirstName + " " + src.Customer.LastName));
+        CreateMap<CreateUpdateProductViewDto, ProductView>()
+            .ForMember(entity => entity.RateDate,
+                       opt => opt.Equals(System.DateTime.Now));
     }
 }
